@@ -1,0 +1,15 @@
+{
+    "cmake.cmakePath": "cube-cmake",
+    "cmake.configureArgs": [
+        "-DCMAKE_COMMAND=cube-cmake"
+    ],
+    "cmake.configureOnOpen": true,
+    "cmake.configurePreset": "Debug",
+    "cmake.preferredGenerators": [
+        "Ninja"
+    ],
+    "C_Cpp.default.defines": [
+        "USE_HAL_DRIVER",
+        "STM32F103xB"
+    ]
+}
