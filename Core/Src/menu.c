@@ -1,4 +1,5 @@
 #include "main.h"
+#include "menu.h"
 #include "MyRTC.h"
 #include "OLED.h"
 #include "key.h"
@@ -6,6 +7,8 @@
 #include "delay.h"
 #include "settime.h"
 #include "MPU6050.h"
+#include "dino.h"
+#include <math.h>
 
 /* GB2312 bytes: "菜单" and "设置" */
 #define CN_MENU_TEXT    "\xB2\xCB\xB5\xA5"

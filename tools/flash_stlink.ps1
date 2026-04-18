@@ -39,6 +39,17 @@ if (-not $hexFile) {
 Write-Host "Using programmer: $cli"
 Write-Host "Using firmware: $($hexFile.FullName)"
 
+function Release-StLinkOccupancy {
+    $processNames = @('ST-LINK_gdbserver', 'STLinkServer', 'arm-none-eabi-gdb')
+    foreach ($name in $processNames) {
+        $procs = Get-Process -Name $name -ErrorAction SilentlyContinue
+        if ($procs) {
+            Write-Host "Stopping process occupying ST-Link: $name"
+            $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
 $flashArgs = @(
     '-c', 'port=SWD', 'mode=UR', 'reset=HWrst', 'freq=1000',
     '-w', $hexFile.FullName,
@@ -46,13 +57,31 @@ $flashArgs = @(
     '-rst'
 )
 
-$maxAttempts = 2
+$flashArgsLowFreq = @(
+    '-c', 'port=SWD', 'mode=UR', 'reset=HWrst', 'freq=400',
+    '-w', $hexFile.FullName,
+    '-v',
+    '-rst'
+)
+
+$maxAttempts = 3
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
     Write-Host "Flash attempt $attempt/$maxAttempts"
-    & $cli @flashArgs
+    if ($attempt -eq $maxAttempts) {
+        Write-Host 'Using low-frequency fallback (400kHz).'
+        & $cli @flashArgsLowFreq
+    }
+    else {
+        & $cli @flashArgs
+    }
     if ($LASTEXITCODE -eq 0) {
         Write-Host 'Flash completed successfully.'
         exit 0
+    }
+
+    if ($attempt -lt $maxAttempts) {
+        Write-Host 'Flash failed, trying to release ST-Link occupancy before retry...'
+        Release-StLinkOccupancy
     }
 }
 

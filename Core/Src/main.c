@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include "key.h"
 #include "OLED.h"
+#include "MyRTC.h"
+#include "menu.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,7 +60,7 @@ osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for myTask03 */
 osThreadId_t myTask03Handle;
@@ -75,8 +77,6 @@ const osThreadAttr_t myTask04_attributes = {
   .priority = (osPriority_t) osPriorityLow,
 };
 /* USER CODE BEGIN PV */
-osMessageQueueId_t keyEventQueueHandle;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -95,6 +95,37 @@ void StartTask04(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+typedef enum
+{
+  UI_PAGE_CLOCK = 0,
+  UI_PAGE_MENU,
+  UI_PAGE_SET_TIME
+} UiPage_t;
+
+static UiPage_t HandleClockPage(void)
+{
+  int page = First_Page_Clock();
+
+  if (page == 1)
+  {
+    return UI_PAGE_MENU;
+  }
+
+  return UI_PAGE_SET_TIME;
+}
+
+static UiPage_t HandleMenuPage(void)
+{
+  (void)Menu();
+  return UI_PAGE_CLOCK;
+}
+
+static UiPage_t HandleSetTimePage(void)
+{
+  SettingPage();
+  return UI_PAGE_CLOCK;
+}
 
 /* USER CODE END 0 */
 
@@ -149,7 +180,7 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-    keyEventQueueHandle = osMessageQueueNew(8, sizeof(uint8_t), NULL);
+  /* key event queue is created inside key.c */
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -433,21 +464,11 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-  uint8_t key_event;
-
   /* Infinite loop */
   for(;;)
   {
-    /* Scan keys periodically and publish events to UI task. */
     Key_Tick();
-
-    key_event = Key_GetNum();
-    if ((key_event != 0U) && (keyEventQueueHandle != NULL))
-    {
-      (void)osMessageQueuePut(keyEventQueueHandle, &key_event, 0, 0);
-    }
-
-    osDelay(10);
+    osDelay(1);
   }
   /* USER CODE END StartTask02 */
 }
@@ -462,55 +483,30 @@ void StartTask02(void *argument)
 void StartTask03(void *argument)
 {
   /* USER CODE BEGIN StartTask03 */
-  uint8_t key_event;
-  uint32_t key_count_1 = 0;
-  uint32_t key_count_2 = 0;
-  uint32_t key_count_3 = 0;
-
+  UiPage_t current_page = UI_PAGE_CLOCK;
   OLED_Init();
-  OLED_Clear();
-  OLED_ShowString(0, 0, "FreeRTOS Key UI", OLED_6X8);
-  OLED_ShowString(0, 16, "K1:", OLED_6X8);
-  OLED_ShowString(0, 24, "K2:", OLED_6X8);
-  OLED_ShowString(0, 32, "K3:", OLED_6X8);
-  OLED_ShowString(0, 48, "Last:", OLED_6X8);
-  OLED_Update();
+  Peripheral_Init();
 
   /* Infinite loop */
   for(;;)
   {
-    if ((keyEventQueueHandle != NULL) &&
-        (osMessageQueueGet(keyEventQueueHandle, &key_event, NULL, 50) == osOK))
+    switch (current_page)
     {
-      switch(key_event)
-      {
-        case 1:
-          key_count_1++;
-          HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_15);
-          break;
-        case 2:
-          key_count_2++;
-          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-          break;
-        case 3:
-          key_count_3++;
-          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
-          break;
-        default:
-          break;
-      }
+      case UI_PAGE_CLOCK:
+        current_page = HandleClockPage();
+        break;
 
-      OLED_ClearArea(24, 16, 80, 24);
-      OLED_ShowNum(24, 16, key_count_1, 4, OLED_6X8);
-      OLED_ShowNum(24, 24, key_count_2, 4, OLED_6X8);
-      OLED_ShowNum(24, 32, key_count_3, 4, OLED_6X8);
+      case UI_PAGE_MENU:
+        current_page = HandleMenuPage();
+        break;
 
-      OLED_ClearArea(36, 48, 24, 8);
-      OLED_ShowNum(36, 48, key_event, 1, OLED_6X8);
-      OLED_UpdateArea(0, 16, 128, 40);
+      case UI_PAGE_SET_TIME:
+      default:
+        current_page = HandleSetTimePage();
+        break;
     }
 
-    osDelay(10);
+    osDelay(1);
   }
   /* USER CODE END StartTask03 */
 }

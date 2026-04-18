@@ -8,7 +8,7 @@ extern "C" {
 #include "main.h"
 
 /* External variables */
-extern uint8_t Key_Num;
+extern volatile uint8_t Key_Num;
 
 /**
   * @brief  Key initialization function

@@ -1,4 +1,16 @@
 #include"main.h"
+#include "dino.h"
+#include "OLED.h"
+#include "key.h"
+#include "delay.h"
+#include <math.h>
+#include <stdlib.h>
+
+#define DINO_GROUND_STEP_MS   14U
+#define DINO_CLOUD_STEP_MS    32U
+#define DINO_SCORE_STEP_MS   120U
+#define DINO_JUMP_HEIGHT_PX   24.0f
+#define DINO_JUMP_TIME_MS    700U
 
 int Score;
 struct Object_Position{
@@ -38,6 +50,12 @@ uint8_t Jump_Pos;
 extern double pi;
 struct Object_Position Barrier;
 
+static uint32_t g_dino_last_tick_ms;
+static uint32_t g_score_acc_ms;
+static uint32_t g_ground_acc_ms;
+static uint32_t g_cloud_acc_ms;
+static uint32_t g_jump_acc_ms;
+
 static uint8_t Dino_NextBarrierType(uint8_t prev)
 {
 	uint8_t next = rand() % 3;
@@ -51,10 +69,11 @@ static uint8_t Dino_NextBarrierType(uint8_t prev)
 void Show_Barrier(void)
 {
 	OLED_ShowImage(127-barrier_pos,44,16,18,barrier[barrier_flag]);//实现随机出现障碍物并且障碍物像左移，随着barrierpos增大，x坐标减小
-	Barrier.minX=127-barrier_pos;
-	Barrier.maxX=143-barrier_pos;
-	Barrier.minY=44;
-	Barrier.maxY=62;
+	/* Shrink hitbox a little to match visible solid pixels better. */
+	Barrier.minX=127-barrier_pos+2;
+	Barrier.maxX=143-barrier_pos-2;
+	Barrier.minY=44+2;
+	Barrier.maxY=62-1;
 }
 void Show_Cloud(void)
 {
@@ -66,10 +85,26 @@ uint16_t jump_t;
 struct Object_Position dino;
 void Show_Dino(void)
 {
+	float jump_phase;
+
 	KeyNum=Key_GetNum();
 	if(KeyNum==1)
 		jump_flag=1;
-	Jump_Pos=28*sin((float)(pi*jump_t/1000));
+
+	if (jump_flag == 1U)
+	{
+		jump_phase = (float)jump_t / (float)DINO_JUMP_TIME_MS;
+		if (jump_phase > 1.0f)
+		{
+			jump_phase = 1.0f;
+		}
+		Jump_Pos=(uint8_t)(DINO_JUMP_HEIGHT_PX * sin((float)(pi * jump_phase)));
+	}
+	else
+	{
+		Jump_Pos = 0U;
+	}
+
 	if(jump_flag==0)
 	{
 		if(Cloud_Pos%2==0)
@@ -83,10 +118,11 @@ void Show_Dino(void)
 	{
 		OLED_ShowImage(0,44-Jump_Pos,16,18,Dino[2]);
 	}
-	dino.minX=0;
-	dino.maxX=16;
-	dino.minY=44-Jump_Pos;
-	dino.maxY=62-Jump_Pos;
+	/* Shrink dino hitbox slightly to reduce false collision feeling. */
+	dino.minX=2;
+	dino.maxX=14;
+	dino.minY=44-Jump_Pos+2;
+	dino.maxY=62-Jump_Pos-1;
 }
 int Collision(struct Object_Position *a,struct Object_Position *b)
 {
@@ -107,6 +143,8 @@ int DinoGame_Animation(void)
 	while(1)
 	{
 		int return_flag;
+		/* Advance game timing counters before rendering each frame. */
+		Dino_Tick();
 		OLED_Clear();
 		Show_Score();
 		Show_Ground();
@@ -119,49 +157,75 @@ int DinoGame_Animation(void)
 		{
 			return 0;
 		}
+		Delay_ms(5);
 	}
 	
 //	return 1;
 }
-void Dino_Tick(void)//设置分频，实现每0.1秒自增
+void Dino_Tick(void)
 {
-	static uint8_t Score_Count,Ground_Count,Cloud_Count;
-	Score_Count++;
-	Ground_Count++;
-	Cloud_Count++;
-	if(Score_Count>=100)
+	uint32_t now_ms;
+	uint32_t dt_ms;
+
+	now_ms = HAL_GetTick();
+	dt_ms = now_ms - g_dino_last_tick_ms;
+	if (dt_ms == 0U)
 	{
-		Score_Count=0;
+		return;
+	}
+	g_dino_last_tick_ms = now_ms;
+
+	/* Score: +1 per 120ms. */
+	g_score_acc_ms += dt_ms;
+	while (g_score_acc_ms >= DINO_SCORE_STEP_MS)
+	{
+		g_score_acc_ms -= DINO_SCORE_STEP_MS;
 		Score++;
 	}
-	if(Ground_Count>=20)
+
+	/* Ground and barrier: move 1px per 14ms for balanced gameplay. */
+	g_ground_acc_ms += dt_ms;
+	while (g_ground_acc_ms >= DINO_GROUND_STEP_MS)
 	{
-		Ground_Count=0;
+		g_ground_acc_ms -= DINO_GROUND_STEP_MS;
 		Ground_Pos++;
 		barrier_pos++;
-		if(Ground_Pos>=256)
-			Ground_Pos=0;
-		if(barrier_pos>=144)
+		if (Ground_Pos >= 256U)
 		{
-			barrier_pos=0;
+			Ground_Pos = 0U;
+		}
+		if (barrier_pos >= 144U)
+		{
+			barrier_pos = 0U;
 			barrier_flag = Dino_NextBarrierType(barrier_flag);
 		}
 	}
-	if(Cloud_Count>=50)
+
+	/* Cloud: slower than ground. */
+	g_cloud_acc_ms += dt_ms;
+	while (g_cloud_acc_ms >= DINO_CLOUD_STEP_MS)
 	{
-		Cloud_Count=0;
+		g_cloud_acc_ms -= DINO_CLOUD_STEP_MS;
 		Cloud_Pos++;
-		if(Cloud_Pos>=188)
-			Cloud_Pos=0;
-	}
-	if(jump_flag==1)
-	{
-		jump_t++;
-		if(jump_t>=1000)
+		if (Cloud_Pos >= 188U)
 		{
-			jump_t=0;
-			jump_flag=0;
+			Cloud_Pos = 0U;
 		}
+	}
+
+	/* Jump animation time base. */
+	if (jump_flag == 1U)
+	{
+		jump_t += dt_ms;
+		if (jump_t >= DINO_JUMP_TIME_MS)
+		{
+			jump_t = 0U;
+			jump_flag = 0U;
+		}
+	}
+	else
+	{
+		g_jump_acc_ms = 0U;
 	}
 }
 void DinoGame_Pos_Init(void)
@@ -171,6 +235,13 @@ void DinoGame_Pos_Init(void)
 	Ground_Pos = 0;
 	Cloud_Pos = 0;
 	Jump_Pos = 0;
+	jump_t = 0;
+	jump_flag = 0;
 	barrier_flag = Dino_NextBarrierType(3);
 	barrier_pos = rand() % 40;
+	g_dino_last_tick_ms = HAL_GetTick();
+	g_score_acc_ms = 0U;
+	g_ground_acc_ms = 0U;
+	g_cloud_acc_ms = 0U;
+	g_jump_acc_ms = 0U;
 }

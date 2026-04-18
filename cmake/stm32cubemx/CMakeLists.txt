@@ -29,7 +29,15 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/stm32f1xx_hal_timebase_tim.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/delay.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/key.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/led.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/menu.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/settime.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/MyI2C.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/MPU6050.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/dino.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/MyRTC.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/OLED.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/OLED_Data.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32f103xb.s

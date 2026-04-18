@@ -23,18 +23,22 @@
         },
         {
             "label": "Generate HEX File",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "--build",
-                "${workspaceFolder}/build/Debug"
+            "dependsOn": [
+                "Build STM32 Project",
+                "Flash HEX (ST-Link)"
             ],
-            "group": "build",
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [],
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
-                "panel": "shared"
+                "panel": "shared",
+                "showReuseMessage": false
             }
         },
         {
@@ -81,24 +85,23 @@
                 "-WorkspaceFolder",
                 "${workspaceFolder}"
             ],
+            "group": "test",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
-                "panel": "shared"
-            }
+                "panel": "shared",
+                "showReuseMessage": false
+            },
+            "problemMatcher": []
         },
         {
             "label": "Build and Flash (ST-Link)",
             "dependsOn": [
-                "Generate HEX File",
-                "Flash HEX (ST-Link)"
+                "Generate HEX File"
             ],
             "dependsOrder": "sequence",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "problemMatcher": []
         }
     ]

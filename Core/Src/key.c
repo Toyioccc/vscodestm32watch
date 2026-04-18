@@ -6,9 +6,13 @@
   */
 
 #include "key.h"
+#include "cmsis_os.h"
+
+#define KEY_EVENT_QUEUE_LEN 8U
 
 /* Key number variable */
-uint8_t Key_Num;
+volatile uint8_t Key_Num;
+static osMessageQueueId_t g_KeyEventQueue;
 
 /**
   * @brief  Key GPIO Initialization Function
@@ -36,6 +40,11 @@ void KEY_Init(void)
 	GPIO_InitStruct.Pull = GPIO_PULLDOWN;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
 	HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+	if (g_KeyEventQueue == NULL)
+	{
+		g_KeyEventQueue = osMessageQueueNew(KEY_EVENT_QUEUE_LEN, sizeof(uint8_t), NULL);
+	}
 }
 
 /**
@@ -46,6 +55,19 @@ void KEY_Init(void)
 uint8_t Key_GetNum(void)
 {
 	uint8_t temp;
+
+	/* Queue mode fallback: still drive debounce sampling from polling path. */
+	Key_Tick();
+
+	if (g_KeyEventQueue != NULL)
+	{
+		if (osMessageQueueGet(g_KeyEventQueue, &temp, NULL, 0U) == osOK)
+		{
+			Key_Num = 0U;
+			return temp;
+		}
+	}
+
 	if(Key_Num)
 	{
 		temp = Key_Num;
@@ -90,15 +112,35 @@ void Key_Tick(void)
 {
 	static uint8_t Count;
 	static uint8_t Currentstate, Prestate;
+	static uint32_t LastSampleMs;
+	uint32_t NowMs;
+
+	NowMs = HAL_GetTick();
+	if ((NowMs - LastSampleMs) < 2U)
+	{
+		return;
+	}
+	LastSampleMs = NowMs;
+
 	Count++;
-	if(Count >= 5)
+	if(Count >= 5U)
 	{
 		Count = 0;
 		Prestate = Currentstate;
 		Currentstate = Key_GetState();
-		if(Prestate != 0 && Currentstate==0)
+		/* Report key event on press edge for faster UI response. */
+		if((Prestate == 0U) && (Currentstate != 0U))
 		{
-			Key_Num = Prestate;
+			Key_Num = Currentstate;
+			if (g_KeyEventQueue != NULL)
+			{
+				if (osMessageQueuePut(g_KeyEventQueue, &Currentstate, 0U, 0U) != osOK)
+				{
+					/* Queue full: keep latest event by clearing queue once. */
+					(void)osMessageQueueReset(g_KeyEventQueue);
+					(void)osMessageQueuePut(g_KeyEventQueue, &Currentstate, 0U, 0U);
+				}
+			}
 		}
 	}
 }
