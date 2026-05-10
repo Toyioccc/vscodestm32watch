@@ -30,6 +30,21 @@ extern "C" {
 #include "stm32f1xx_hal.h"
 
 /* Exported types ------------------------------------------------------------*/
+typedef enum
+{
+  UI_PAGE_CLOCK = 0,
+  UI_PAGE_MENU,
+  UI_PAGE_SETTING,
+  UI_PAGE_SEL_FIELD,
+  UI_PAGE_ADJ_YEAR,
+  UI_PAGE_ADJ_MONTH,
+  UI_PAGE_ADJ_DAY,
+  UI_PAGE_ADJ_HOUR,
+  UI_PAGE_ADJ_MIN,
+  UI_PAGE_ADJ_SEC,
+  UI_PAGE_GAME,
+  UI_PAGE_EMOJI,
+} UiPage_t;
 /* USER CODE BEGIN ET */
 
 /* USER CODE END ET */
@@ -46,10 +61,8 @@ extern "C" {
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Peripheral_Init(void);
-void Show_clock_UI(void);
-int First_Page_Clock(void);
 int Menu(void);
-void SettingPage(void);
+int SettingPage(void);
 int First_Page_Clock(void);
 void StopWatch_Tick(void);
 int StopWatch(void);
@@ -58,6 +71,16 @@ int MPU6050(void);
 int Game(void);
 int Emoji(void);
 int Gradienter(void);
+void Battery_ReadADC(void);
+UiPage_t Page_SelField(void);
+UiPage_t Page_AdjYear(void);
+UiPage_t Page_AdjMonth(void);
+UiPage_t Page_AdjDay(void);
+UiPage_t Page_AdjHour(void);
+UiPage_t Page_AdjMin(void);
+UiPage_t Page_AdjSec(void);
+UiPage_t Page_Game(void);
+UiPage_t Page_Emoji(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

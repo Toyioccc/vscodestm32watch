@@ -5,9 +5,15 @@
 extern "C" {
 #endif
 
-#include "main.h"
+#include "menu.h"
 
-int SetTime(void);
+UiPage_t Page_SelField(void);
+UiPage_t Page_AdjYear(void);
+UiPage_t Page_AdjMonth(void);
+UiPage_t Page_AdjDay(void);
+UiPage_t Page_AdjHour(void);
+UiPage_t Page_AdjMin(void);
+UiPage_t Page_AdjSec(void);
 
 #ifdef __cplusplus
 }

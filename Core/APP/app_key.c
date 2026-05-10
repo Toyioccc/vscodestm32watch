@@ -5,12 +5,10 @@
   ******************************************************************************
   */
 
-#include "key.h"
+#include "app_key.h"
 #include "cmsis_os.h"
-
-#define KEY_EVENT_QUEUE_LEN 8U
-
-osMessageQueueId_t g_KeyEventQueue;
+#include "stm32f1xx_hal.h"
+static osMessageQueueId_t g_KeyEventQueue;
 
 /**
   * @brief  Key GPIO Initialization Function

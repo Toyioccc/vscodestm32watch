@@ -1,6 +1,15 @@
 #include "main.h"                  // Device header
 #include "Delay.h"
 
+static void MyI2C_ShortDelay(void)
+{
+	volatile uint32_t i;
+	for (i = 0; i < 80U; i++)
+	{
+		__NOP();
+	}
+}
+
 /*引脚配置层*/
 
 /**
@@ -12,7 +21,7 @@
 void MyI2C_W_SCL(uint8_t BitValue)
 {
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, BitValue?GPIO_PIN_SET:GPIO_PIN_RESET);		//根据BitValue，设置SCL引脚的电平
-	Delay_us(10);												//延时10us，防止时序频率超过要求
+	MyI2C_ShortDelay();							//短延时，防止时序频率超过要求
 }
 
 /**
@@ -24,7 +33,7 @@ void MyI2C_W_SCL(uint8_t BitValue)
 void MyI2C_W_SDA(uint8_t BitValue)
 {
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, BitValue?GPIO_PIN_SET:GPIO_PIN_RESET);		//根据BitValue，设置SDA引脚的电平，BitValue要实现非0即1的特性
-	Delay_us(10);												//延时10us，防止时序频率超过要求
+	MyI2C_ShortDelay();							//短延时，防止时序频率超过要求
 }
 
 /**
@@ -37,7 +46,7 @@ uint8_t MyI2C_R_SDA(void)
 {
 	uint8_t BitValue;
 	BitValue = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11);		//读取SDA电平
-	Delay_us(10);												//延时10us，防止时序频率超过要求
+	MyI2C_ShortDelay();							//短延时，防止时序频率超过要求
 	return BitValue;											//返回SDA电平
 }
 
@@ -151,4 +160,25 @@ uint8_t MyI2C_ReceiveAck(void)
 	AckBit = MyI2C_R_SDA();					//将应答位存储到变量里
 	MyI2C_W_SCL(0);							//拉低SCL，开始下一个时序模块
 	return AckBit;							//返回定义应答位变量
+}
+
+uint8_t MyI2C_CheckDevice(uint8_t Address)
+{
+	uint8_t ack;
+
+	/* Bus idle sanity: if SDA cannot be released high, consider bus fault/offline. */
+	MyI2C_W_SDA(1);
+	MyI2C_W_SCL(1);
+	if (MyI2C_R_SDA() == 0U)
+	{
+		MyI2C_Stop();
+		return 0U;
+	}
+
+	MyI2C_Start();
+	MyI2C_SendByte(Address & 0xFEU);
+	ack = MyI2C_ReceiveAck();
+	MyI2C_Stop();
+
+	return (ack == 0U) ? 1U : 0U;
 }

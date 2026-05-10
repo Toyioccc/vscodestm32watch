@@ -15,13 +15,13 @@
 #define CN_MENU_TEXT    "\xB2\xCB\xB5\xA5"
 #define CN_SETTING_TEXT "\xC9\xE8\xD6\xC3"
 #define CN_DINO_TEXT    "\xB9\xC8\xB8\xE8\xD0\xA1\xBF\xD6\xC1\xFA"
-extern uint8_t KeyNum; //全局按键状态变量
+
 extern const uint8_t Diode[];
-extern osMessageQueueId_t g_KeyEventQueue;
+
 int clkflag=1;
 int setflag=1;
 void MPU6050_Caculation(void);
-extern uint8_t KeyNum;
+uint8_t KeyNum;
 void Show_Clock_UI(void);
 void Show_SettingPage_UI(void);
 void MenuToFunction(void);
@@ -89,7 +89,7 @@ static void ClockPage_HandleNavigation(uint8_t key_num)
 	}
 }
 
-static void ClockPage_Render(void)//根据clkflag的值渲染不同的UI界面
+static void ClockPage_Render(void)
 {
 	switch (clkflag)
 	{
@@ -199,11 +199,13 @@ static uint8_t Menu_DispatchAction(uint8_t action)
 
 		case 5:
 			MenuToFunction();
-			return 5;
+			Game();
+			break;
 
 		case 6:
 			MenuToFunction();
-			return 6;
+			Emoji();
+			break;
 
 		case 7:
 			MenuToFunction();
@@ -263,18 +265,19 @@ void Show_Clock_UI(void)
 /* Keep compatibility with existing declaration in menu.h */
 int First_Page_Clock(void)
 {
-	if (KeyNum == 1 || KeyNum == 2)
+	while(1)
+	{
 		ClockPage_HandleNavigation(KeyNum);
 
-	if (KeyNum == 3)
-	{
-		OLED_Clear();
-		OLED_Update();
-		return clkflag;
-	}
+		if(KeyNum==3)
+		{
+			OLED_Clear();
+			OLED_Update();
+			return clkflag;
+		}
 
-	ClockPage_Render();
-	return 0;
+		ClockPage_Render();
+	}
 }
 /*----------------------------------设置界面-------------------------------------*/
 void Show_SettingPage_UI(void)
@@ -301,23 +304,28 @@ void Show_SettingPage_UI(void)
 // 	}
 // }
 
-int SettingPage(void)
+void SettingPage(void)
 {
-	if (KeyNum == 1 || KeyNum == 2)
+	while(1)
+	{
 		SettingPage_HandleNavigation(KeyNum);
 
-	if (KeyNum == 3)
-	{
-		OLED_Clear();
-		OLED_Update();
-		if (setflag == 1)
-			return 1;
-		if (setflag == 2)
-			return 2;
-	}
+		if(KeyNum==3)
+		{
+			OLED_Clear();
+			OLED_Update();
+			if(setflag==1)
+			{
+				return;
+			}
+			if(setflag==2)
+			{
+				SetTime();
+			}
+		}
 
-	SettingPage_Render();
-	return 0;
+		SettingPage_Render();
+	}
 }
 /*----------------------------------滑动菜单界面-------------------------------------*/
 uint8_t pre_selection;//上次选择的选项
@@ -434,39 +442,23 @@ void MenuToFunction(void)
 uint8_t menu_flag=1;
 int Menu(void)
 {
-	static uint8_t first_entry = 1;
-	static uint8_t DirectFlag = 2;
-
-	if (first_entry)
+	move_flag=1;
+	uint8_t DirectFlag=2;//置1：移动到上一项；置2：移动到下一项
+	while(1)
 	{
-		move_flag = 1;
-		DirectFlag = 2;
-		first_entry = 0;
-	}
-
-	if (KeyNum == 1 || KeyNum == 2)
 		Menu_HandleNavigation(KeyNum, &DirectFlag);
 
-	if (KeyNum == 3)
-	{
-		OLED_Clear();
-		OLED_Update();
-
+		if(KeyNum==3)//确认
 		{
-			uint8_t action = Menu_DispatchAction(menu_flag);
-			if (action == 1)
+			OLED_Clear();
+			OLED_Update();
+
+			if (Menu_DispatchAction(menu_flag))
 			{
-				first_entry = 1;
-				return 1;
-			}
-			if (action == 5 || action == 6)
-			{
-				first_entry = 1;
-				return action;
+				return 0;
 			}
 		}
-	}
 
-	Menu_RenderCurrentSelection(DirectFlag);
-	return 0;
+		Menu_RenderCurrentSelection(DirectFlag);
+	}
 }

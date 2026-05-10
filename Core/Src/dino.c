@@ -11,6 +11,7 @@
 #define DINO_SCORE_STEP_MS   120U
 #define DINO_JUMP_HEIGHT_PX   24.0f
 #define DINO_JUMP_TIME_MS    700U
+#define DINO_PI               3.1415927f
 
 int Score;
 struct Object_Position{
@@ -47,7 +48,6 @@ uint8_t barrier_flag;
 uint8_t barrier_pos;
 uint8_t Cloud_Pos;
 uint8_t Jump_Pos;
-extern double pi;
 struct Object_Position Barrier;
 
 static uint32_t g_dino_last_tick_ms;
@@ -86,8 +86,6 @@ struct Object_Position dino;
 void Show_Dino(void)
 {
 	float jump_phase;
-
-	KeyNum=Key_GetNum();
 	if(KeyNum==1)
 		jump_flag=1;
 
@@ -98,7 +96,7 @@ void Show_Dino(void)
 		{
 			jump_phase = 1.0f;
 		}
-		Jump_Pos=(uint8_t)(DINO_JUMP_HEIGHT_PX * sin((float)(pi * jump_phase)));
+		Jump_Pos=(uint8_t)(DINO_JUMP_HEIGHT_PX * sinf(DINO_PI * jump_phase));
 	}
 	else
 	{

@@ -33,10 +33,14 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/key.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/led.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/menu.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/menu_app_tools.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/menu_app_sensors.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/menu_app_fun.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/settime.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/MyI2C.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/MPU6050.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/dino.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/AD.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/MyRTC.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/OLED.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/OLED_Data.c

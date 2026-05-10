@@ -26,6 +26,7 @@ extern const uint8_t Cloud[];
 extern const uint8_t Dino[][48];
 extern const uint8_t eyebrow[][32];
 extern const uint8_t mouth[];
+extern const uint8_t Battery[];
 #ifdef __cplusplus
 }
 #endif

@@ -26,6 +26,10 @@
 #include "OLED.h"
 #include "MyRTC.h"
 #include "menu.h"
+#include "settime.h"
+#include "AD.h"
+uint8_t KeyNum; //全局按键状态变量
+extern osMessageQueueId_t g_KeyEventQueue;
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,20 +64,20 @@ osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for myTask03 */
 osThreadId_t myTask03Handle;
 const osThreadAttr_t myTask03_attributes = {
   .name = "myTask03",
-  .stack_size = 128 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for myTask04 */
 osThreadId_t myTask04Handle;
 const osThreadAttr_t myTask04_attributes = {
   .name = "myTask04",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* USER CODE BEGIN PV */
@@ -96,13 +100,6 @@ void StartTask04(void *argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-typedef enum
-{
-  UI_PAGE_CLOCK = 0,
-  UI_PAGE_MENU,
-  UI_PAGE_SET_TIME
-} UiPage_t;
-
 static UiPage_t HandleClockPage(void)
 {
   int page = First_Page_Clock();
@@ -111,21 +108,39 @@ static UiPage_t HandleClockPage(void)
   {
     return UI_PAGE_MENU;
   }
-
-  return UI_PAGE_SET_TIME;
+  if (page == 2)
+  {
+    return UI_PAGE_SETTING;
+  }
+  return UI_PAGE_CLOCK;
 }
 
 static UiPage_t HandleMenuPage(void)
 {
-  (void)Menu();
-  return UI_PAGE_CLOCK;
+  int r = Menu();
+  if (r == 1)       return UI_PAGE_CLOCK;
+  if (r == 5)       return UI_PAGE_GAME;
+  if (r == 6)       return UI_PAGE_EMOJI;
+  return UI_PAGE_MENU;
 }
 
-static UiPage_t HandleSetTimePage(void)
+static UiPage_t HandleSettingPage(void)
 {
-  SettingPage();
-  return UI_PAGE_CLOCK;
+  int r = SettingPage();
+  if (r == 1) return UI_PAGE_CLOCK;
+  if (r == 2) return UI_PAGE_SEL_FIELD;
+  return UI_PAGE_SETTING;
 }
+
+static UiPage_t HandleSelFieldPage(void)  { return Page_SelField(); }
+static UiPage_t HandleAdjYearPage(void)   { return Page_AdjYear(); }
+static UiPage_t HandleAdjMonthPage(void)  { return Page_AdjMonth(); }
+static UiPage_t HandleAdjDayPage(void)    { return Page_AdjDay(); }
+static UiPage_t HandleAdjHourPage(void)   { return Page_AdjHour(); }
+static UiPage_t HandleAdjMinPage(void)    { return Page_AdjMin(); }
+static UiPage_t HandleAdjSecPage(void)    { return Page_AdjSec(); }
+static UiPage_t HandleGamePage(void)      { return Page_Game(); }
+static UiPage_t HandleEmojiPage(void)     { return Page_Emoji(); }
 
 /* USER CODE END 0 */
 
@@ -161,7 +176,7 @@ int main(void)
   MX_RTC_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
+  AD_Init();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -184,20 +199,15 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
   /* creation of myTask02 */
   myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
 
   /* creation of myTask03 */
   myTask03Handle = osThreadNew(StartTask03, NULL, &myTask03_attributes);
 
-  /* creation of myTask04 */
-  myTask04Handle = osThreadNew(StartTask04, NULL, &myTask04_attributes);
-
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  myTask04Handle = osThreadNew(StartTask04, NULL, &myTask04_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -490,23 +500,31 @@ void StartTask03(void *argument)
   /* Infinite loop */
   for(;;)
   {
+    /* Read key event from queue (non-blocking) */
+    uint8_t key = 0;
+    if (osMessageQueueGet(g_KeyEventQueue, &key, NULL, 0) == osOK)
+      KeyNum = key;
+    else
+      KeyNum = 0;
+
     switch (current_page)
     {
-      case UI_PAGE_CLOCK:
-        current_page = HandleClockPage();
-        break;
-
-      case UI_PAGE_MENU:
-        current_page = HandleMenuPage();
-        break;
-
-      case UI_PAGE_SET_TIME:
-      default:
-        current_page = HandleSetTimePage();
-        break;
+      case UI_PAGE_CLOCK:       current_page = HandleClockPage();     break;
+      case UI_PAGE_MENU:        current_page = HandleMenuPage();      break;
+      case UI_PAGE_SETTING:     current_page = HandleSettingPage();   break;
+      case UI_PAGE_SEL_FIELD:   current_page = HandleSelFieldPage();  break;
+      case UI_PAGE_ADJ_YEAR:    current_page = HandleAdjYearPage();   break;
+      case UI_PAGE_ADJ_MONTH:   current_page = HandleAdjMonthPage();  break;
+      case UI_PAGE_ADJ_DAY:     current_page = HandleAdjDayPage();    break;
+      case UI_PAGE_ADJ_HOUR:    current_page = HandleAdjHourPage();   break;
+      case UI_PAGE_ADJ_MIN:     current_page = HandleAdjMinPage();    break;
+      case UI_PAGE_ADJ_SEC:     current_page = HandleAdjSecPage();    break;
+      case UI_PAGE_GAME:        current_page = HandleGamePage();      break;
+      case UI_PAGE_EMOJI:       current_page = HandleEmojiPage();     break;
+      default:                  current_page = UI_PAGE_CLOCK;         break;
     }
 
-    osDelay(1);
+    osDelay(20);
   }
   /* USER CODE END StartTask03 */
 }
@@ -524,7 +542,8 @@ void StartTask04(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    Battery_ReadADC();
+    osDelay(1000);
   }
   /* USER CODE END StartTask04 */
 }

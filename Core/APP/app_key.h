@@ -1,6 +1,5 @@
-#ifndef __KEY_H
-#define __KEY_H
-#include "main.h"
+#ifndef __APP_KEY_H
+#define __APP_KEY_H
 
 #ifdef __cplusplus//
 extern "C" {
